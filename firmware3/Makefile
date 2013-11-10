@@ -100,16 +100,16 @@ endif
 ###########################
 
 # The microcontroller to use
-MCU			= attiny4313
+MCU			= atmega328
 # The controller's frequency in Herz
-FREQ			= 8000000
+FREQ			= 16000000
 
 ###########################
 # PROGRAMMER CONFIGURATION
 ###########################
 
 PROGRAMMER	= usbasp
-PROG_MCU		= t4313
+PROG_MCU		= m328p
 
 # Additional arguments for avrdude
 AVRDUDE_ARGS = 

@@ -1,7 +1,7 @@
 #include "rfm12_config.h"
 #include <avr/interrupt.h>
 #include <avr/io.h>
-#include <avr/delay.h>
+#include <util/delay.h>
 #include "rfm12lib/rfm12.h"
 #define MASK1(b1)                         ( (1<<b1) )
 #define MASK2(b1,b2)                      ( (1<<b1) | (1<<b2) )
@@ -21,7 +21,7 @@ volatile uint32_t numberToDisplay;
 volatile uint8_t delay;
 
 void main (void) {
-	_delay_ms(100);  //little delay for the rfm12 to initialize properly
+	_delay_ms(1000);  //little delay for the rfm12 to initialize properly
 	rfm12_init();
 	setup();
 
@@ -80,8 +80,11 @@ ISR(TIMER1_COMPA_vect)
 }
 
 void setup (void) {
-	 DDRD |= (1 << PD5) | (1 << PD6) | (1 << PD2) | (1 << PD0);
+	  DDRD |= (1 << PD5) | (1 << PD6) | (1 << PD0);
 	  DDRB |= (1 << PB4) | (1 << PB0);
+
+	  DDRD &= ~(1 << PD2);
+	  DDRB &= ~(1 << PB1);
 
 	  PORTB &= ~(1 << OE);
 	  PORTD |= (1 << MR);
@@ -124,13 +127,18 @@ void loop() {
 
 	if (delay > 200) {
 		delay = 0;
-		numberToDisplay = 4294967295UL;
+		if (numberToDisplay == 1UL) {
+			numberToDisplay = 0UL;
+		} else {
+			numberToDisplay = 1UL;
+		}
 	}
 
 	if (rfm12_rx_status() == STATUS_COMPLETE)
 	{
 		rfm12_rx_clear();
 		numberToDisplay = 4294967295UL;
+		_delay_ms(1000);
 	}
 
 	rfm12_tick();
