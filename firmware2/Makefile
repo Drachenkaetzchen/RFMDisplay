@@ -66,7 +66,7 @@ WARN			= -Wall
 DEBUG			= 
 
 # C source files (.c)
-C_SOURCES	=  rfm12.c main.c
+C_SOURCES	=  main.c rfm12.c
 
 # Assemby source files (.S)
 ASM_SOURCES	=
@@ -102,7 +102,7 @@ endif
 # The microcontroller to use
 MCU			= attiny4313
 # The controller's frequency in Herz
-FREQ			= 8000000
+FREQ			= 500000
 
 ###########################
 # PROGRAMMER CONFIGURATION

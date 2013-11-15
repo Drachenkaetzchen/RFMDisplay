@@ -1,14 +1,17 @@
 #include "rfm12_config.h"
+#include <avr/power.h>
 #include <avr/interrupt.h>
 #include <avr/io.h>
 #include <util/delay.h>
+#include <avr/wdt.h>
+#include <avr/sleep.h>
 #include "rfm12lib/rfm12.h"
 #define MASK1(b1)                         ( (1<<b1) )
 #define MASK2(b1,b2)                      ( (1<<b1) | (1<<b2) )
 #define MASK3(b1,b2,b3)                   ( (1<<b1) | (1<<b2) | (1<<b3) )
 #define MASK4(b1,b2,b3,b4)                ( (1<<b1) | (1<<b2) | (1<<b3) | (1<<b4) )
 
-#define QUARTER_SECOND_TICKS 32
+#define QUARTER_SECOND_TICKS 20
 #define OE PB2
 #define MR PD6
 #define LATCH PD5
@@ -18,67 +21,65 @@
 
 volatile uint8_t cycle;
 volatile uint32_t numberToDisplay;
-volatile uint8_t delay;
 
 void main (void) {
-	_delay_ms(1000);  //little delay for the rfm12 to initialize properly
+	_delay_ms(100);  //little delay for the rfm12 to initialize properly
 	rfm12_init();
 	setup();
-
-
-	while (1) {
-		loop();
-	}
+	loop();
 }
 
 ISR(TIMER1_COMPA_vect)
 {
-  uint8_t cnt;
-
-  if (cycle) {
-
-    // take the latchPin low so
-    // the LEDs don't change while you're sending in bits:
-    PORTD &= ~(1 << LATCH);
-
-    for (cnt=0;cnt<32;cnt++) {
-
-       if (!!(numberToDisplay & (1UL << (31 - cnt)))) {
-         PORTB |= (1 << DATA);
-       } else {
-          PORTB &= ~(1<<DATA);
-       }
-
-       PORTB |= (1 << CLOCK);
-       PORTB &= ~(1 << CLOCK);
-
-
-    }
-
-    //take the latch pin high so the LEDs will light up:
-    PORTD |= (1 << LATCH);
-    PORTD &= ~(1 << CYCLE);
-  } else {
-     // take the latchPin low so
-    // the LEDs don't change while you're sending in bits:
-    PORTD &= ~(1 << LATCH);
-
-    for (cnt=0;cnt<32;cnt++) {
-    if (!!(~numberToDisplay & (1UL << (31 - cnt)))) {
-         PORTB |= (1 << DATA);
-       } else {
-        PORTB &= ~(1<<DATA);
-       }
-       PORTB |= (1 << CLOCK);
-       PORTB &= ~(1 << CLOCK);
-    }
-
-    PORTD |= (1 << LATCH) | (1 << CYCLE);
-  }
-
-  cycle = !cycle;
+	refresh();
 }
 
+void refresh (void) {
+	  uint8_t cnt;
+
+	  if (cycle) {
+
+	    // take the latchPin low so
+	    // the LEDs don't change while you're sending in bits:
+	    PORTD &= ~(1 << LATCH);
+
+	    for (cnt=0;cnt<32;cnt++) {
+
+	       if (!!(numberToDisplay & (1UL << (31 - cnt)))) {
+	         PORTB |= (1 << DATA);
+	       } else {
+	          PORTB &= ~(1<<DATA);
+	       }
+
+	       PORTB |= (1 << CLOCK);
+	       PORTB &= ~(1 << CLOCK);
+
+
+	    }
+
+	    //take the latch pin high so the LEDs will light up:
+	    PORTD |= (1 << LATCH);
+	    PORTD &= ~(1 << CYCLE);
+	  } else {
+	     // take the latchPin low so
+	    // the LEDs don't change while you're sending in bits:
+	    PORTD &= ~(1 << LATCH);
+
+	    for (cnt=0;cnt<32;cnt++) {
+	    if (!!(~numberToDisplay & (1UL << (31 - cnt)))) {
+	         PORTB |= (1 << DATA);
+	       } else {
+	        PORTB &= ~(1<<DATA);
+	       }
+	       PORTB |= (1 << CLOCK);
+	       PORTB &= ~(1 << CLOCK);
+	    }
+
+	    PORTD |= (1 << LATCH) | (1 << CYCLE);
+	  }
+
+	  cycle = !cycle;
+}
 void setup (void) {
 	  DDRD |= (1 << PD5) | (1 << PD6) | (1 << PD0);
 	  DDRB |= (1 << PB4) | (1 << PB0);
@@ -121,26 +122,32 @@ void setup (void) {
 	  numberToDisplay = 0;
 }
 
-
 void loop() {
+	uint8_t delay=0;
+	numberToDisplay=0;
+	while (1) {
 	delay++;
 
-	if (delay > 200) {
+	if (delay > 254) {
 		delay = 0;
-		if (numberToDisplay == 1UL) {
+		numberToDisplay++;
+		/*if (numberToDisplay == 1UL) {
 			numberToDisplay = 0UL;
 		} else {
 			numberToDisplay = 1UL;
-		}
+		}*/
 	}
 
 	if (rfm12_rx_status() == STATUS_COMPLETE)
-	{
+  	{
 		rfm12_rx_clear();
 		numberToDisplay = 4294967295UL;
-		_delay_ms(1000);
-	}
+		_delay_ms(100);
+		numberToDisplay = 127;
+  	}
 
 	rfm12_tick();
+
+	}
 }
 
