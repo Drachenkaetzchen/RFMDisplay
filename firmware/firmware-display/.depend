@@ -1,0 +1,16 @@
+main.o: main.c rfm12.h rfm12_config.h ../config.h \
+ ../firmware-libs/rfm12/rfm12.h \
+ ../firmware-libs/rfm12/include/rfm12_core.h \
+ ../firmware-libs/rfm12/include/rfm12_extra.h \
+ ../firmware-libs/rfm12/include/rfm12_livectrl.h
+rfm12.o: rfm12.c rfm12_config.h ../config.h \
+ ../firmware-libs/rfm12/rfm12.c ../firmware-libs/rfm12/include/rfm12_hw.h \
+ ../firmware-libs/rfm12/include/rfm12_core.h \
+ ../firmware-libs/rfm12/rfm12.h \
+ ../firmware-libs/rfm12/include/rfm12_extra.h \
+ ../firmware-libs/rfm12/include/rfm12_livectrl.h \
+ ../firmware-libs/rfm12/include/rfm12_spi.c \
+ ../firmware-libs/rfm12/include/rfm12_livectrl.c \
+ ../firmware-libs/rfm12/include/rfm12_extra.c
+uart.o: ../firmware-libs/uart_lib/uart.c ../firmware-libs/uart_lib/uart.h \
+ ../firmware-libs/uart_lib/../../config.h
