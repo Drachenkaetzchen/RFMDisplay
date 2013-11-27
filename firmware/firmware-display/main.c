@@ -3,6 +3,9 @@
 #include <util/delay.h>
 #include <string.h>
 #include <stdlib.h>
+#include <avr/power.h>
+#include <avr/sleep.h>
+#include <stdbool.h>
 
 #include "rfm12.h"
 
@@ -18,13 +21,33 @@
 #define DATA PB0
 #define CLOCK PB4
 
+/**
+ * Defines the number of buffers to fill. Each buffer eats 4 bytes of RAM.
+ */
+#define NUM_BUFFER_COUNT 2
+
+/**
+ * As we have a static display, we need to cycle between polarities. Holds the polarity.
+ */
 volatile uint8_t cycle = 0;
+
+/**
+ * Global counter for the shift register. Represents the current bit to output
+ */
 volatile uint8_t gcnt = 0;
+
+/**
+ * Holds the 32 bit number to display
+ */
 volatile uint32_t numberToDisplay = 0;
 
-void ernst (uint8_t cnt);
+void pushToOutput (uint8_t cnt);
 
-void ernst (uint8_t cnt) {
+/**
+ * Pushes a specific bit to the output. This function is designed to run as fast as possible,
+ * as we need to listen for interrupts. See the ISR for TIMER1_COMPA_vect
+ */
+void pushToOutput (uint8_t cnt) {
 	if (cycle) {
 		if (!!(numberToDisplay & (1UL << (31 - cnt)))) {
 		 PORTB |= (1 << DATA);
@@ -46,13 +69,20 @@ void ernst (uint8_t cnt) {
 
 }
 
-
+/**
+ * Timer1 ISR.
+ *
+ * Each time this gets called, it outputs a single bit to the shift register to keep the cycles low, in case
+ * something is received via the RFM12 module.
+ *
+ * Whent he cycle is full, we latch the shift register.
+ */
 ISR(TIMER1_COMPA_vect)
 {
 	if (gcnt==0) {
 		PORTD &= ~(1 << LATCH);
 	}
-	ernst(gcnt);
+	pushToOutput(gcnt);
 	gcnt++;
 
 	if (gcnt==32) {
@@ -68,6 +98,9 @@ ISR(TIMER1_COMPA_vect)
 	}
 }
 
+/**
+ * Set up the ports
+ */
 void setup (void) {
 	  DDRD |= (1 << PD5) | (1 << PD6) | (1 << PD0);
 	  DDRB |= (1 << PB4) | (1 << PB0);
@@ -112,45 +145,78 @@ void setup (void) {
 	  sei(); // Enable global interrupts
 
 	  numberToDisplay = 0;
+
+	  rfm12_power_up();
+
+	  rfm12_rx_clear();
 }
+
 int main ( void )
 {
 	_delay_ms(100);  //little delay for the rfm12 to initialize properly
 	rfm12_init();    //init the RFM12
 
-	
-
 	setup();
-
 	loop();
 }
 
 void loop() {
 	uint8_t *bufptr;
 	uint8_t i;
-	uint8_t delay=0;
 	numberToDisplay=983280;
+
+	uint32_t numBuffer[NUM_BUFFER_COUNT];
+	uint8_t numBufferCount = 0;
+	uint8_t numBufferOK = false;
+
 	while (1) {
 
-	if (rfm12_rx_status() == STATUS_COMPLETE)
-  	{
-		bufptr = rfm12_rx_buffer(); //get the address of the current rx buffer
+		if (rfm12_rx_status() == STATUS_COMPLETE)
+		{
+			bufptr = rfm12_rx_buffer(); //get the address of the current rx buffer
 
-		numberToDisplay = (uint32_t)strtoul((char*)bufptr, NULL, 24);
 
-		rfm12_power_down();
-		for (i=0;i<30;i++) {
-		_delay_ms(1000);
+			numBuffer[numBufferCount]= (uint32_t)strtoul((char*)bufptr, NULL, 24);
+			numBufferCount++;
+			rfm12_rx_clear();
+
+			// As I didn't want to change the code on the sender node, I simply wait until
+			// all buffers have the same number. This may or may not be a good solution,
+			// but it works pretty well in my case.
+
+			if (numBufferCount == NUM_BUFFER_COUNT) {
+				numBufferCount = 0;
+			}
+
+			numBufferOK = true;
+			for (i=1;i<NUM_BUFFER_COUNT;i++) {
+				if (numBuffer[i] != numBuffer[0]) {
+					numBufferOK = false;
+				}
+			}
+
+
+			if (numBufferOK) {
+				numberToDisplay = numBuffer[0];
+
+				rfm12_power_down();
+
+				clock_prescale_set(clock_div_256); // Lower the clock frequency
+
+				// Wait for approx. 30 minutes
+				for (i=0;i<300;i++) {
+				_delay_ms(200);
+				}
+
+				// Prescale to normal, power up everything again
+				clock_prescale_set(clock_div_8);
+				rfm12_power_up();
+
+			}
+
 		}
-		rfm12_power_up();
-
-		rfm12_rx_clear();
-
-  	}
-
 	rfm12_tick();
-	_delay_us(100);
-
+	_delay_ms(1);
 	}
 }
 

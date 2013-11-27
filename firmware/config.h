@@ -25,7 +25,7 @@
  ******************************************************/
 
 #define UART_BAUD_RATE 1200
-#define UART_HEXDUMP
+//#define UART_HEXDUMP
 
 /************************
  * Debug LED for examples
@@ -72,7 +72,7 @@
 #define RFM12_RSSI_THRESHOLD  RFM12_RXCTRL_RSSI_73
 
 //Receive Filter Bandwidth
-#define RFM12_FILTER_BW       RFM12_RXCTRL_BW_400
+#define RFM12_FILTER_BW       RFM12_RXCTRL_BW_200
 
 //Output power relative to maximum (0dB is maximum)
 #define RFM12_POWER           RFM12_TXCONF_POWER_0
@@ -126,5 +126,5 @@
  * RFM12 CLOCK OUTPUT
  */
 
-#define RFM12_USE_CLOCK_OUTPUT        1 
+#define RFM12_USE_CLOCK_OUTPUT        0
 #define RFM12_CLOCK_OUT_FREQUENCY     RFM12_CLOCK_OUT_FREQUENCY_1_00_MHz
