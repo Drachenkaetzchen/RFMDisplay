@@ -201,13 +201,14 @@ void loop() {
 
 				rfm12_power_down();
 
-				clock_prescale_set(clock_div_256); // Lower the clock frequency
+				clock_prescale_set(clock_div_32); // Lower the clock frequency
 
-				// Wait for approx. 30 minutes
-				for (i=0;i<300;i++) {
-				_delay_ms(200);
+				// Wait for approx. 10 minutes
+				for (i=0;i<80;i++) {
+				_delay_ms(1000);
 				}
 
+				i=0;
 				// Prescale to normal, power up everything again
 				clock_prescale_set(clock_div_8);
 				rfm12_power_up();
